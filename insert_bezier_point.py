@@ -8,7 +8,6 @@ import bpy
 import bgl
 import blf
 import numpy as np
-import math
 import mathutils
 
 
@@ -50,7 +49,7 @@ def draw_callback_bezier_2d(self, context):
     font_id = 0
     blf.position(font_id, (context.area.width-84)/2, context.area.height / 8 * 7, 0)
     blf.size(font_id, 12, 72)
-    blf.draw(font_id, "Inserting Point: " + str(at))
+    blf.draw(font_id, "Inserting Point: " + str(self.at))
     
     gl_end_and_restore()
     
