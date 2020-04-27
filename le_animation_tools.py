@@ -2,14 +2,12 @@
 # http://wiki.blender.org/index.php/Dev:2.5/Py/Scripts/Guidelines/Addons/metainfo
 #
 bl_info = {
-    "name": "Le Animation Tools",
-    "description": "Blender Animation Tools Panel combining useful functions, scattered across the UI.",
+    "name": "Animation Tools",
+    "description": "Blender Animation Tools Panel combining useful functions from the UI.",
     "author": "Arun Leander",
     "version": (0, 0),
     "blender": (2, 78, 0),
     "location": "3D View > Properties Panel",
-    "warning": "", # used for warning icon and text in addons panel
-    "wiki_url": "",
     "category": "Animation"}
 
 import bpy
