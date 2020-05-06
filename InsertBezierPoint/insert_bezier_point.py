@@ -3,18 +3,20 @@ bl_info = {
     "author": "Arun Leander",
     "category": "Curve",
     "version": (0, 8),
-    "blender": (2, 79, 0),
+    "blender": (2, 80, 0),
     "description": "Select two points of a bezier curve and press I to insert another bezier point between them.",
     "warning": "Read the preferences below.",
 }
 
 import bpy
 import bgl
+import gpu
 import blf
 import numpy as np
 import math
 import mathutils
 from bpy_extras.view3d_utils import location_3d_to_region_2d
+from gpu_extras.batch import batch_for_shader
 
 
 class CubicBezier(object):
@@ -41,13 +43,11 @@ class CubicBezier(object):
         return [p1,p12,p123,p1234,p234,p34,p4]
 
 def gl_end_and_restore():
-    bgl.glEnd()
     bgl.glLineWidth(1)
     bgl.glDisable(bgl.GL_BLEND)
     bgl.glEnable(bgl.GL_DEPTH_TEST)
-    bgl.glColor4f(0.0, 0.0, 0.0, 1.0)
     bgl.glPointSize(1)
-    
+
 def draw_callback_bezier_2d(self, context):
     bgl.glEnable(bgl.GL_BLEND)
 
@@ -55,9 +55,11 @@ def draw_callback_bezier_2d(self, context):
     blf.position(font_id, (context.area.width-84)/2, context.area.height / 8 * 7, 0)
     blf.size(font_id, 12, 72)
     blf.draw(font_id, "Inserting Point: " + "{:10.4f}".format(self.at[2]))
-    
+
     gl_end_and_restore()
-    
+
+shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+
 def draw_callback_bezier_3d(self, context):
     bgl.glEnable(bgl.GL_BLEND)
     bgl.glDepthFunc(bgl.GL_ALWAYS)
@@ -65,57 +67,44 @@ def draw_callback_bezier_3d(self, context):
     bezier = self.beziers[self.at[0]][self.at[1]]
     split = bezier.split(self.at[2])
     points = bezier.points
-    
-    bgl.glColor4f(1,1,1,0.5)
+
     bgl.glLineWidth(1.0)
-    bgl.glBegin(bgl.GL_LINES)
-    bgl.glVertex3f(*points[0])
-    bgl.glVertex3f(*points[1])
-    bgl.glVertex3f(*points[2])
-    bgl.glVertex3f(*points[3])
-    bgl.glEnd()
-    
-    bgl.glColor4f(1,1,1,1)
+    shader.bind()
+    shader.uniform_float("color", (1, 1, 1, 0.5))
+    batch = batch_for_shader(shader, 'LINES', {"pos": points})
+    batch.draw(shader)
+
     bgl.glPointSize(6)
-    bgl.glBegin(bgl.GL_POINTS)
-    bgl.glVertex3f(*points[0])
-    bgl.glVertex3f(*points[3])
-    bgl.glEnd()
-    
+    shader.uniform_float("color", (1, 1, 1, 1))
+    batch = batch_for_shader(shader, 'POINTS', {"pos": [points[0], points[3]]})
+    batch.draw(shader)
+
     bgl.glPointSize(2)
-    bgl.glBegin(bgl.GL_POINTS)
-    bgl.glVertex3f(*points[1])
-    bgl.glVertex3f(*points[2])
-    bgl.glEnd()
-    
+    batch = batch_for_shader(shader, 'POINTS', {"pos": [points[1], points[2]]})
+    batch.draw(shader)
+
     # draw new bezier anchor
-    bgl.glColor4f(0.8, 1.0, 0.0, 0.5)
     bgl.glLineWidth(2)
-    bgl.glBegin(bgl.GL_LINE_STRIP)
-    bgl.glVertex3f(*split[2])
-    bgl.glVertex3f(*split[3])
-    bgl.glVertex3f(*split[4])
-    bgl.glEnd()
-    
-    bgl.glColor4f(0.2,1,0.0, 1.0)
+    shader.uniform_float("color", (0.8, 1.0, 0.0, 0.5))
+    batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": [split[2], split[3], split[4]]})
+    batch.draw(shader)
+
     bgl.glPointSize(10)
-    bgl.glBegin(bgl.GL_POINTS)
-    bgl.glVertex3f(*split[3])
-    bgl.glEnd()
-    
+    shader.uniform_float("color", (0.2, 1, 0.0, 1.0))
+    batch = batch_for_shader(shader, 'POINTS', {"pos": [split[3]]})
+    batch.draw(shader)
+
     bgl.glPointSize(6)
-    bgl.glBegin(bgl.GL_POINTS)
-    bgl.glVertex3f(*split[2])
-    bgl.glVertex3f(*split[4])
-    bgl.glEnd()
-    
+    batch = batch_for_shader(shader, 'POINTS', {"pos": [split[2], split[4]]})
+    batch.draw(shader)
+
     gl_end_and_restore()
 
 
 class CURVE_OT_insert_bezier_spline_points(bpy.types.AddonPreferences):
     bl_idname = __name__
 
-    snap_to = bpy.props.EnumProperty(
+    snap_to: bpy.props.EnumProperty(
         name="Snap To",
         items = [
             ('SEGMENT', 'Segment', 'Use only the segment, which the mouse had hovered over.'),
@@ -123,26 +112,26 @@ class CURVE_OT_insert_bezier_spline_points(bpy.types.AddonPreferences):
             ('ALL', 'All', 'Snap to any curve of the object.')],
         default='SINGLE',
         )
-    samples = bpy.props.IntProperty(
+    samples: bpy.props.IntProperty(
             name="Samples",
             description="Number of rough samples between two bezier control point. Increase for accuracy, decrease for speed. Used for the brute force algorithm, which determines the distance to the mouse.",
             default=13,
             )
-    epsilon = bpy.props.FloatProperty(
+    epsilon: bpy.props.FloatProperty(
             name="Epsilon",
             description="Distance of the final samples. Decrease, if the inserted point seems stepped. Increase, for speed.",
             default=0.008,
             precision=4,
             step=10
             )
-    single_select = bpy.props.EnumProperty(
+    single_select: bpy.props.EnumProperty(
         name="Spline",
         items = [
             ('CLOSEST', '3D Closest', 'Use the spline closest to the mouse.'),
             ('ACTIVE', 'Active', 'Use the active spline.')],
         default='ACTIVE',
         )
-    segment_select = bpy.props.EnumProperty(
+    segment_select: bpy.props.EnumProperty(
         name="Segment",
         items = [
             ('CLOSEST', '2D Closest', 'Use the segment closest to the mouse.'),
@@ -158,11 +147,11 @@ class CURVE_OT_insert_bezier_spline_points(bpy.types.AddonPreferences):
         if (self.snap_to != "ALL"):
             row.column().row().prop(self, "single_select")
         else:
-            row.column().label("")
+            row.column().label(text="")
         if (self.snap_to == "SEGMENT"):
             row.column().row().prop(self, "segment_select")
         else:
-            row.column().label("")
+            row.column().label(text="")
 
         split = layout.split()
         col = split.column()
@@ -213,9 +202,9 @@ class InsertBezierPoint(bpy.types.Operator):
                         info_vec = None
 
                         if is_perspective:
-                            points.append([a, b, (view_mat*vec).length])
+                            points.append([a, b, (view_mat @ vec).length])
                         else:
-                            points.append([a, b, -(view_mat*vec).z])
+                            points.append([a, b, -(view_mat @ vec).z])
         
         if len(points) == 0:
             return -1, -1
@@ -271,15 +260,14 @@ class InsertBezierPoint(bpy.types.Operator):
             pt_b = location_3d_to_region_2d(context.region, context.region_data, bezier.at(index_b))
             distance_b = (pt_b - mouse_pos).length
             difference = abs(distance_a - distance_b)
-        
         return [*mindex, index_a]
         
     def create_new_spline(self, context):
         spline_points = self.ob.data.splines[self.at[0]].bezier_points
-        spline_points.add()
+        spline_points.add(1)
 
         split = self.beziers[self.at[0]][self.at[1]].split(self.at[2])
-        
+
         for i in range(len(spline_points)-2, self.at[1], -1):
             spline_points[i+1].co           = spline_points[i].co 
             spline_points[i+1].handle_right = spline_points[i].handle_right
@@ -323,7 +311,7 @@ class InsertBezierPoint(bpy.types.Operator):
     def exit_handler(self):
         bpy.types.SpaceView3D.draw_handler_remove(self._handle_2d, 'WINDOW')
         bpy.types.SpaceView3D.draw_handler_remove(self._handle_3d, 'WINDOW')
-        self.ob.select = True
+        self.ob.select_set(True)
         bpy.ops.object.mode_set(mode='EDIT')
         
     def modal(self, context, event):
@@ -364,8 +352,8 @@ class InsertBezierPoint(bpy.types.Operator):
         splines = self.ob.data.splines
         self.beziers = self.beziers_from_splines(splines)
 
-        user_preferences = context.user_preferences
-        self.addon_prefs = user_preferences.addons[__name__].preferences
+        preferences = context.preferences
+        self.addon_prefs = preferences.addons[__name__].preferences
         self.EPSILON = self.addon_prefs.epsilon
         self.a0 = 0
         self.a1 = len(self.beziers)
@@ -416,7 +404,7 @@ class InsertBezierPoint(bpy.types.Operator):
 
         context.window_manager.modal_handler_add(self)
         bpy.ops.object.mode_set(mode='OBJECT')
-        self.ob.select = False
+        self.ob.select_set(False)
         return {'RUNNING_MODAL'}
     
 
