@@ -36,24 +36,30 @@ def export_deformer_weights(geo, path):
         print(shape.name() + " has no skinClusters to export.")
 
 # freeze the rotations of joints, by disconnecting them first
-def freeze_transformations(joints):
-    connections = []
-    for j in joints:
-        con = j.listConnections(type='animCurveTA', connections = 1)
-        connections.extend(con)
+def apply_joint_orientations(joints):
     
-    for con in connections:
-        pm.disconnectAttr(con[1] + ".output", con[0])
+    for j in joints: # (angular ?)
+        connections = j.listConnections(type='animCurveTA', connections = 1)
     
-    for j in joints:
-        pm.makeIdentity(j, apply=1, t=0, r=1, s=0, n=0, jo=0)
-    
-    for con in connections:
-        pm.connectAttr(con[1] + ".output", con[0])
-        crv = con[1]
-        values = pm.keyframe(crv, q = 1, vc = 1)
-        pm.keyframe(crv, vc = -values[0], r = 1)
+        # Freezing transforms doesn't work as expected, when
+        # a parent is scaled.
+        #pm.makeIdentity(j, apply=1, t=0, r=1, s=0, n=0, jo=0)
         
+        #orient = pm.getAttr(ob + ".rotate")
+        #j_orient = pm.getAttr(ob + ".jointOrient")
+        start_values = pm.getAttr(j + ".rotate")
+        
+        for i, con in enumerate(connections):
+            #pm.connectAttr(con[1] + ".output", con[0])
+            crv = con[1]
+            values = pm.keyframe(crv, q = 1, vc = 1)
+            
+            start_values[i] = values[0]
+            pm.keyframe(crv, vc = -values[0], r = 1)
+        
+        pm.setAttr(j + ".rotate", pm.datatypes.Vector())
+        pm.setAttr(j + ".jointOrient", start_values)
+
 
 # "scale" a rig by scaling the translation values
 def scale_joints(joints, scale_factor):
@@ -62,6 +68,7 @@ def scale_joints(joints, scale_factor):
         v = [scale_factor * x for x in v]
         j.setAttr("t", v)
 
+
 # scale geometry and freeze everything
 def scale_geo(geo, scale_factor):
     for g in geo:
@@ -69,6 +76,7 @@ def scale_geo(geo, scale_factor):
         v = [scale_factor * x for x in v]
         g.setAttr("s", v)
         pm.makeIdentity(g, apply=1, t=1, r=1, s=1, n=0, jo=0)
+
 
 # remove bind poses 
 def remove_bindPoses(joints):
@@ -156,7 +164,7 @@ def import_deformer_weights(WORKING_DIR):
         #cmds.select(cmds.skinCluster('skinCluster2', q=True, inf=True))
 
 
-WORKING_DIR = "F:/weights/"
+WORKING_DIR = "D:/weights/"
 if not os.path.exists(WORKING_DIR):
     os.makedirs(WORKING_DIR)
 
@@ -170,7 +178,6 @@ joints = pm.ls(an=1, ap=1, et='joint')
 # or do the looping outside of the function and only pass single joints
 if True:
     for j in joints:
-        mobu_convention(j)
         break_ts_anim(j)
         if not len(j.listRelatives(p=True)):
             pm.setAttr(j + '.tx', 0)
@@ -184,9 +191,11 @@ if True:
         export_deformer_weights(g, WORKING_DIR)
         
         # don't use single shader, use incandescence option
+        
         #shader = [x for x in pm.ls(type="shadingEngine") if x.name() == 'initialShadingGroup'][0]
         #pm.sets(shader, forceElement=g)
-        lambert_to_flat(g)
+        
+        #lambert_to_flat(g)
         
         # remove skinCluster
         pm.delete(g, ch = 1)
@@ -194,7 +203,7 @@ if True:
 if True:
     shift_curves(joints, START_FRAME)
     pm.setCurrentTime(START_FRAME)
-    freeze_transformations(joints)
+    apply_joint_orientations(joints)
 
 # scale geometry and joints, freeze scale on geometry, use the translation method for joints
 if True:
@@ -219,19 +228,13 @@ if True:
             pm.setKeyframe(j, at='translate', time=[START_FRAME])
 
 
+
+if True:
+    for j in joints:
+        mobu_convention(j)
+
 if True:
     for files in os.listdir(WORKING_DIR):
         os.remove(os.path.join(WORKING_DIR, files))
-
-import shutil
-shutil.rmtree(WORKING_DIR)
-
-
-
-
-
-
-
-
-
-
+    import shutil
+    shutil.rmtree(WORKING_DIR)
