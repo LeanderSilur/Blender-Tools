@@ -2,7 +2,7 @@ import bpy
 import bmesh
 import numpy as np
 import mathutils
-from math import floor, ceil
+
 
 def get_mesh(name):
     if bpy.data.objects.get(name) == None:
