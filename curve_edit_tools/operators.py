@@ -179,26 +179,28 @@ class InsertBezierPoint(bpy.types.Operator):
         spline_points[i+1].handle_right_type = 'ALIGNED'
         spline_points[i+1].handle_left_type  = 'ALIGNED'
         
-        spline_points[i].handle_right = mathutils.Vector(split[1])
-        spline_points[i + 1].co = mathutils.Vector(split[3])
-        spline_points[i + 1].handle_left = mathutils.Vector(split[2])
-        spline_points[i + 1].handle_right = mathutils.Vector(split[4])
-        spline_points[i + 2].handle_left = mathutils.Vector(split[5])
+        mat = self.ob.matrix_world.inverted()
+        spline_points[i].handle_right =     mat @ mathutils.Vector(split[1])
+        spline_points[i + 1].co =           mat @ mathutils.Vector(split[3])
+        spline_points[i + 1].handle_left =  mat @ mathutils.Vector(split[2])
+        spline_points[i + 1].handle_right = mat @ mathutils.Vector(split[4])
+        spline_points[i + 2].handle_left =  mat @ mathutils.Vector(split[5])
 
         spline_points[i + 1].select_control_point = True
         spline_points[i + 1].select_right_handle = True
         spline_points[i + 1].select_left_handle = True
     
-    def beziers_from_splines(self, splines):
+    def beziers_from_splines(self, splines, mat):
         beziers = []
         for spline in splines:
             spline_beziers = []
             for i in range(len(spline.bezier_points) - 1):
                 
-                bezier_points = [  spline.bezier_points[i].co.copy(),
-                            spline.bezier_points[i].handle_right.copy(),
-                            spline.bezier_points[i + 1].handle_left.copy(),
-                            spline.bezier_points[i + 1].co.copy()   ]
+                bezier_points = [   mat @ spline.bezier_points[i].co,
+                                    mat @ spline.bezier_points[i].handle_right,
+                                    mat @ spline.bezier_points[i + 1].handle_left,
+                                    mat @ spline.bezier_points[i + 1].co
+                                ]
                 
                 spline_beziers.append(CubicBezier(bezier_points))
             beziers.append(spline_beziers)
@@ -264,7 +266,7 @@ class InsertBezierPoint(bpy.types.Operator):
         self.ob = context.object
         # convert all splines in to lists of cubic beziers
         splines = self.ob.data.splines
-        self.beziers = self.beziers_from_splines(splines)
+        self.beziers = self.beziers_from_splines(splines, self.ob.matrix_world)
 
         preferences = context.preferences
         self.addon_prefs = preferences.addons[__package__].preferences
