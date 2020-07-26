@@ -8,7 +8,9 @@ Simulating secondary movement with bones (instead of cloth, softbodies or others
 Like any Blender Addon through the Blender Preferences.  
 The addon is located in the Testing section.
 
-## Dependencies
+![preferences](doc/install.png)
+
+### Dependencies
 
 The addon requires the python `scipy` module. AFAIK, you have to install it manually for Blender's bundled python or tell Blender to use another python installation with `scipy` installed. Do the following steps to install `scipy` for a Blender installation's python.
 
@@ -18,8 +20,6 @@ The addon requires the python `scipy` module. AFAIK, you have to install it manu
 4. Open a console at `path/to/python/bin`.
 5. Install `scipy` with `pip` by entering: `python -m pip install scipy`.
 6. Restart Blender.
-
-![preferences](doc/install.png)
 
 ## Usage
 
