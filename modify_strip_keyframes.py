@@ -16,7 +16,7 @@ def modify_strip_keyframes(scene_name, strip_name, keyframe_values = [1.0, 0.0])
         print("Strip not found.")
         return
     
-    data_path = 'sequence_editor.sequences_all["' + strip_name + '"].blend_alpha'
+    data_path = strip.path_from_id("blend_alpha")
     fcrv = scene.animation_data.action.fcurves.find(data_path)
     
     if fcrv == None:
