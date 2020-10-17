@@ -30,7 +30,19 @@ The addon requires the python `scipy` module. AFAIK, you have to install it manu
 3. Go into pose mode and choose the menu item Simbones > Bake to bake the movement to keyframes.
 ![preferences](doc/simulate.png)
 
+## Operations
+
+These shortcuts are available on selected pose bones in the 3D Viewport, when in Pose Mode. To understand the purpose of the *Custom Force* shortcuts, read the description of the *Custom Force* (under *Features*) first.
+
+Name | Shortcut (default) |Description
+--- | --- | ---
+Bake Simbones               | Ctrl B        | Bake the movement of simbones to keyframes. Bakes all simbones in Object Mode and selected simbones in Pose Mode.
+Move (Custom Force)         | F             | Interactively position the custom force in the 3D viewport.
+Auto Align (Custom Force)   | Ctrl Shift F  | Align the custom force of simbones with their current orientation.
+Auto Scale (Custom Force)   | Ctrl Shift G  | Scale the custom force of simbones to counteract gravity. As a result, the simbone will not move in their rest pose. This will only work with aligned simbones
+
 ## Features
+
 Name | Description
 --- | ---
 Length | Different bone length will taken into account. Longer bones swing with a slower frequency.

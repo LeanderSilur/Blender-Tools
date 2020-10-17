@@ -10,6 +10,7 @@ Global properties are located in
 """
 
 import bpy
+from bl_ui.utils import PresetPanel
 import math
 import mathutils
 import decimal
@@ -27,7 +28,7 @@ class SimBone(bpy.types.PropertyGroup):
         soft_min=-10, soft_max=10,
         description='Custom Force. Can resist gravity.',
         subtype='ACCELERATION', unit='ACCELERATION')
-    up_offset: bpy.props.FloatProperty(default=0,
+    up_offset: bpy.props.FloatProperty(default=90,
         name='Up Offset', description='Up axis in spherical coordinates.',
         subtype ='ANGLE', unit='ROTATION',
         min=0, max=math.pi)
@@ -68,27 +69,35 @@ class SimBoneWorld(bpy.types.PropertyGroup):
         description='Precision used by the scipy solver.',
         min=0.01)
 
+
+class SIMBONE_PT_bone_presets(PresetPanel, bpy.types.Panel):
+    bl_label = 'Simbone Bone Presets'
+    preset_subdir = 'simbone/bone'
+    preset_operator = 'script.execute_preset'
+    preset_add_operator = 'pose.simbone_bone_preset_add'
+
 class BONE_PT_simbone(bpy.types.Panel):
-    """Panel in the properties (N) Panel"""
+    """Panel in the Properties Area"""
     bl_label = "Simulation"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "bone"
     bl_options = {'DEFAULT_CLOSED'}
     
+    def draw_header_preset(self, _context):
+        SIMBONE_PT_bone_presets.draw_panel_header(self.layout)
+
     @classmethod
     def poll(cls, context):
-        return context.mode == 'POSE' and context.object.data.bones.active != None
+        return context.mode == 'POSE' and context.active_pose_bone != None
 
     def draw_header(self, context):
-        active = context.object.data.bones.active
-        bone = context.object.pose.bones[active.name]
+        bone = context.active_pose_bone
         self.layout.prop(bone.simbone, "active", text="")
 
     def draw(self, context):
-        bone = context.object.data.bones.active
+        bone = context.active_pose_bone
         if bone == None: return None
-        bone = context.object.pose.bones[bone.name]
         simbone = bone.simbone
 
         layout = self.layout
@@ -105,14 +114,24 @@ class BONE_PT_simbone(bpy.types.Panel):
         col.prop(simbone, "c_a")
         col.prop(simbone, "c_d")
 
+class SIMBONE_PT_world_presets(PresetPanel, bpy.types.Panel):
+    bl_label = 'Simbone Scene Presets'
+    preset_subdir = 'simbone/world'
+    preset_operator = 'script.execute_preset'
+    preset_add_operator = 'pose.simbone_world_preset_add'
+    
+
 class SCENE_PT_simboneworld(bpy.types.Panel):
-    """Panel in the properties (N) Panel"""
+    """Panel in the Properties Area"""
     bl_label = "Bone Simulation"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "scene"
     bl_options = {'DEFAULT_CLOSED'}
     
+    def draw_header_preset(self, _context):
+        SIMBONE_PT_world_presets.draw_panel_header(self.layout)
+
     def draw_header(self, context):
         self.layout.prop(context.scene.simboneworld, "active", text="")
 
@@ -134,8 +153,8 @@ class SCENE_PT_simboneworld(bpy.types.Panel):
         layout.row().prop(simboneworld, "spaceScale")
         layout.row().prop(simboneworld, "precision")
 
-class POSE_MT_simbone(bpy.types.Menu):
-    bl_idname = "POSE_MT_simbone"
+class VIEW3D_MT_simbone(bpy.types.Menu):
+    bl_idname = "VIEW3D_MT_simbone"
     bl_label = "Simbones"
 
     def draw(self, _context):
@@ -150,4 +169,33 @@ class POSE_MT_simbone(bpy.types.Menu):
 
 def add_simbone_menu(self, context):
     if context.mode == 'POSE':
-        self.layout.menu(POSE_MT_simbone.bl_idname)
+        self.layout.menu(VIEW3D_MT_simbone.bl_idname)
+
+
+classes = (
+    SimBone,
+    SimBoneWorld,
+    SIMBONE_PT_bone_presets,
+    BONE_PT_simbone,
+    SIMBONE_PT_world_presets,
+    SCENE_PT_simboneworld,
+    VIEW3D_MT_simbone,
+)
+
+def register():
+    from bpy.utils import register_class
+    for cls in classes:
+        register_class(cls)
+
+    bpy.types.PoseBone.simbone = bpy.props.PointerProperty(type=SimBone)
+    bpy.types.Scene.simboneworld = bpy.props.PointerProperty(type=SimBoneWorld)
+
+    bpy.types.VIEW3D_MT_editor_menus.append(add_simbone_menu)
+
+
+def unregister():
+    bpy.types.VIEW3D_MT_editor_menus.remove(add_simbone_menu)
+    
+    from bpy.utils import unregister_class
+    for cls in classes:
+        unregister_class(cls)

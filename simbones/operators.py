@@ -25,6 +25,9 @@ def get_matrices_single_bone(ob, pose_bone, edit_bone, frames):
         'sca': { 'count': 3, 'path': 'scale', 'object': pose_bone.scale },
     }
 
+    if ob.animation_data == None:
+        ob.animation_data_create()
+
     for key, value in transforms.items():
         result = dict(zip(frames, [value['object'].copy() for f in frames]))
 
@@ -161,7 +164,7 @@ class BoneSimulationOp(bpy.types.Operator):
 class AlignCustomForce(BoneSimulationOp, bpy.types.Operator):
     bl_idname = "pose.simbones_align_custom_force"
     bl_label = "Align Custom Force of Simbones"
-    bl_description = "Align the custom force of simbones with their current orientation."
+    bl_description = "Align the custom force of simbones with their current orientation"
 
     def execute(self, context):
         edit_bones = get_pose_bone_selection(context)
@@ -192,7 +195,7 @@ class AlignCustomForce(BoneSimulationOp, bpy.types.Operator):
 class ScaleCustomForce(BoneSimulationOp, bpy.types.Operator):
     bl_idname = "pose.simbones_scale_custom_force"
     bl_label = "Scale Custom Force of Simbones"
-    bl_description = "Scale the custom force of simbones to counteract gravity. As a result, the simbone will not move in their rest pose. This will only work with aligned simbones."
+    bl_description = "Scale the custom force of simbones to counteract gravity. As a result, the simbone will not move in their rest pose. This will only work with aligned simbones"
     
     def execute(self, context):
         gravity = get_gravity(context.scene)
@@ -242,9 +245,8 @@ def draw_callback(self):
 class TranslateCustomForce(BoneSimulationOp, bpy.types.Operator):
     bl_idname = "pose.simbones_translate_custom_force"
     bl_label = "Translate Custom Force Simbones"
-    bl_description = "Bake the movement of simbones to keyframes. Bakes all simbones in Object Mode and selected simbones in Pose Mode."
+    bl_description = "Interactively position the custom force in the 3D viewport"
     bl_options = { 'REGISTER', 'UNDO' }
-    
 
     @classmethod
     def poll(cls, context):
@@ -309,13 +311,18 @@ class TranslateCustomForce(BoneSimulationOp, bpy.types.Operator):
         self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback, (self,), 'WINDOW', 'POST_VIEW')
         context.window_manager.modal_handler_add(self)
         return {'RUNNING_MODAL'}
+    
+    def execute(self, context):
+        print("called execute")
+        return {'FINISHED'}
+        
 
 
 
 class BakeBoneSimulation(bpy.types.Operator):
     bl_idname = "pose.simbones_bake"
     bl_label = "Bake Simbones"
-    bl_description = "Bake the movement of simbones to keyframes. Bakes all simbones in Object Mode and selected simbones in Pose Mode."
+    bl_description = "Bake the movement of simbones to keyframes. Bakes all simbones in Object Mode and selected simbones in Pose Mode"
     bl_options = { 'REGISTER', 'UNDO' }
 
     @classmethod
@@ -333,3 +340,23 @@ class BakeBoneSimulation(bpy.types.Operator):
         
         self.report({'INFO'}, "Baked Simbones: "  + ", ".join([b.name for b in edit_bones]))
         return { 'FINISHED' }
+
+
+classes = (
+    TranslateCustomForce,
+    BakeBoneSimulation,
+    AlignCustomForce,
+    ScaleCustomForce,
+)
+
+def register():
+    from bpy.utils import register_class
+    for cls in classes:
+        register_class(cls)
+
+
+
+def unregister():
+    from bpy.utils import unregister_class
+    for cls in classes:
+        unregister_class(cls)
