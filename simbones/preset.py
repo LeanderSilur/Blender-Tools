@@ -24,7 +24,7 @@ class AddPresetSimboneWorld(AddPresetBase, Operator):
     bl_label = 'Add a preset'
     preset_menu = 'SIMBONE_PT_world_presets'
 
-    preset_defines = ['bone = bpy.context.scene.simboneworld']
+    preset_defines = ['world = bpy.context.scene.simboneworld']
     preset_values = [
         'world.active',
         'world.gravity',
