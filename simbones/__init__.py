@@ -32,8 +32,19 @@ def remove_keymap():
         km.keymap_items.remove(kmi)
     addon_keymaps.clear()
 
+def install_scipy():
+    try:
+        import scipy
+    except Exception as e:
+        print("Installing Scipy...")
+        import sys
+        import ensurepip
+        ensurepip.bootstrap()
+        subprocess.call([sys.executable, "-m", "pip", "install", "scipy"])
 
 def register():
+    install_scipy()
+
     from . import gui
     from . import operators
     from . import preset
