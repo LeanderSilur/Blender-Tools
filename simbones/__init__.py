@@ -39,6 +39,7 @@ def install_scipy():
         print("Installing Scipy...")
         import sys
         import ensurepip
+        import subprocess
         ensurepip.bootstrap()
         subprocess.call([sys.executable, "-m", "pip", "install", "scipy"])
 
