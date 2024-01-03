@@ -1,15 +1,9 @@
-"""
-
-Special Thanks to Andrew Yang for contributing the update to 2.8x!
-
-"""
-
 bl_info = {
     "name": "Curve Edit Tools",
     "author": "Arun Leander",
     "category": "Curve",
-    "version": (0, 9),
-    "blender": (2, 80, 0),
+    "version": (0, 95),
+    "blender": (4, 0, 0),
     "description": "In the edit mode of a bezier curve and press I to insert another bezier point.",
     "warning": "Read the preferences below.",
 }

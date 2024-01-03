@@ -1,5 +1,4 @@
 import bpy
-import bgl
 import gpu
 import math
 import mathutils
@@ -11,51 +10,46 @@ bezier_py = importlib.import_module('.bezier', package=__package__)
 CubicBezier = getattr(bezier_py, 'CubicBezier')
 
 
-shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 
 def draw_callback_bezier_3d(self, context):
-    bgl.glEnable(bgl.GL_BLEND)
-    bgl.glDepthFunc(bgl.GL_ALWAYS)
+    depth_test = gpu.state.depth_test_get()
+    gpu.state.depth_test_set('LESS')
 
     bezier = self.beziers[self.spline_id][self.bezier_id]
     split = bezier.split(self.at)
     points = bezier.points
 
-    bgl.glLineWidth(1.0)
-    shader.bind()
     shader.uniform_float("color", (1, 1, 1, 0.5))
     batch = batch_for_shader(shader, 'LINES', {"pos": points})
     batch.draw(shader)
-
-    bgl.glPointSize(6)
+ 
+    gpu.state.point_size_set(6)
     shader.uniform_float("color", (1, 1, 1, 1))
     batch = batch_for_shader(shader, 'POINTS', {"pos": [points[0], points[3]]})
     batch.draw(shader)
 
-    bgl.glPointSize(2)
+    gpu.state.point_size_set(3)
     batch = batch_for_shader(shader, 'POINTS', {"pos": [points[1], points[2]]})
     batch.draw(shader)
 
     # draw new bezier anchor
-    bgl.glLineWidth(2)
     shader.uniform_float("color", (0.8, 1.0, 0.0, 0.5))
     batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": [split[2], split[3], split[4]]})
     batch.draw(shader)
 
-    bgl.glPointSize(10)
+    gpu.state.point_size_set(10)
     shader.uniform_float("color", (0.2, 1, 0.0, 1.0))
     batch = batch_for_shader(shader, 'POINTS', {"pos": [split[3]]})
     batch.draw(shader)
 
-    bgl.glPointSize(6)
+    gpu.state.point_size_set(6)
     batch = batch_for_shader(shader, 'POINTS', {"pos": [split[2], split[4]]})
     batch.draw(shader)
 
     # gl end and restore
-    bgl.glLineWidth(1)
-    bgl.glDisable(bgl.GL_BLEND)
-    bgl.glEnable(bgl.GL_DEPTH_TEST)
-    bgl.glPointSize(1)
+    gpu.state.depth_test_set(depth_test)
+    gpu.state.point_size_set(1)
 
 class InsertBezierPoint(bpy.types.Operator):
     """Insert a point between existing bezier spline keypoints."""
