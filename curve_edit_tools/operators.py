@@ -10,9 +10,9 @@ bezier_py = importlib.import_module('.bezier', package=__package__)
 CubicBezier = getattr(bezier_py, 'CubicBezier')
 
 
-shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 
 def draw_callback_bezier_3d(self, context):
+    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
     depth_test = gpu.state.depth_test_get()
     gpu.state.depth_test_set('LESS')
 
